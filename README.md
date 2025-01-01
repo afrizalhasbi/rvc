@@ -43,77 +43,58 @@
 	</tr>
 </table>
 
-## 简介
-本仓库具有以下特点
-+ 使用top1检索替换输入源特征为训练集特征来杜绝音色泄漏
-+ 即便在相对较差的显卡上也能快速训练
-+ 使用少量数据进行训练也能得到较好结果(推荐至少收集10分钟低底噪语音数据)
-+ 可以通过模型融合来改变音色(借助ckpt处理选项卡中的ckpt-merge)
-+ 简单易用的网页界面
-+ 可调用UVR5模型来快速分离人声和伴奏
-+ 使用最先进的[人声音高提取算法InterSpeech2023-RMVPE](#参考项目)根绝哑音问题。效果最好（显著地）但比crepe_full更快、资源占用更小
-+ A卡I卡加速支持
+## Introduction
+This repository has the following features:
++ Uses top1 retrieval to replace input source features with training set features to prevent timbre leakage.
++ Capable of rapid training even on relatively low-end GPUs.
++ Achieves good results with a small amount of training data (recommended to collect at least 10 minutes of low-noise speech data).
++ Allows for timbre alteration through model fusion (using the ckpt-merge option in the ckpt processing tab).
++ Features a simple and user-friendly web interface.
++ Can invoke the UVR5 model for quick separation of vocals and accompaniment.
++ Utilizes the state-of-the-art [InterSpeech2023-RMVPE](#reference-projects) pitch extraction algorithm to eliminate voiceless issues. It offers the best performance (significantly) and is faster and less resource-intensive than crepe_full.
++ Supports acceleration for AMD and Intel GPUs.
 
-点此查看我们的[演示视频](https://www.bilibili.com/video/BV1pm4y1z7Gm/) !
+Click here to watch our [demo video](https://www.bilibili.com/video/BV1pm4y1z7Gm/)!
 
-## 环境配置
-以下指令需在 Python 版本大于3.8的环境中执行。  
+## Environment Setup
+The following instructions should be executed in a Python environment with a version greater than 3.8.
 
-### Windows/Linux/MacOS等平台通用方法
-下列方法任选其一。
-#### 1. 通过 pip 安装依赖
-1. 安装Pytorch及其核心依赖，若已安装则跳过。参考自: https://pytorch.org/get-started/locally/
+### Universal Method for Windows/Linux/MacOS Platforms
+Choose one of the following methods.
+#### 1. Install Dependencies via pip
+1. Install Pytorch and its core dependencies. Skip this step if already installed. Reference: https://pytorch.org/get-started/locally/
 ```bash
 pip install torch torchvision torchaudio
 ```
-2. 如果是 win 系统 + Nvidia Ampere 架构(RTX30xx)，根据 #21 的经验，需要指定 pytorch 对应的 cuda 版本
+2. For Windows systems with Nvidia Ampere architecture (RTX30xx), based on #21's experience, you need to specify the corresponding CUDA version for Pytorch:
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
 ```
-3. 根据自己的显卡安装对应依赖
-- N卡
+3. Install the corresponding dependencies based on your graphics card:
+- Nvidia GPUs
 ```bash
 pip install -r requirements.txt
 ```
-- A卡/I卡
+- AMD/Intel GPUs
 ```bash
 pip install -r requirements-dml.txt
 ```
-- A卡ROCM(Linux)
+- AMD ROCm (Linux)
 ```bash
 pip install -r requirements-amd.txt
 ```
-- I卡IPEX(Linux)
+- Intel IPEX (Linux)
 ```bash
 pip install -r requirements-ipex.txt
 ```
 
-#### 2. 通过 poetry 来安装依赖
-安装 Poetry 依赖管理工具，若已安装则跳过。参考自: https://python-poetry.org/docs/#installation
-```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
+## Preparation of Other Pre-trained Models
+RVC requires some additional pre-trained models for inference and training.
 
-通过 Poetry 安装依赖时，python 建议使用 3.7-3.10 版本，其余版本在安装 llvmlite==0.39.0 时会出现冲突
-```bash
-poetry init -n
-poetry env use "path to your python.exe"
-poetry run pip install -r requirments.txt
-```
+You can download these models from our [Hugging Face space](https://huggingface.co/lj1995/VoiceConversionWebUI/tree/main/).
 
-### MacOS
-可以通过 `run.sh` 来安装依赖
-```bash
-sh ./run.sh
-```
-
-## 其他预模型准备
-RVC需要其他一些预模型来推理和训练。
-
-你可以从我们的[Hugging Face space](https://huggingface.co/lj1995/VoiceConversionWebUI/tree/main/)下载到这些模型。
-
-### 1. 下载 assets
-以下是一份清单，包括了所有RVC所需的预模型和其他文件的名称。你可以在`tools`文件夹找到下载它们的脚本。
+### 1. Download Assets
+Below is a list of all the pre-trained models and other files required by RVC. You can find scripts to download them in the `tools` folder.
 
 - ./assets/hubert/hubert_base.pt
 
@@ -121,82 +102,73 @@ RVC需要其他一些预模型来推理和训练。
 
 - ./assets/uvr5_weights
 
-想使用v2版本模型的话，需要额外下载
+If you want to use the v2 version models, you need to additionally download:
 
 - ./assets/pretrained_v2
 
-### 2. 安装 ffmpeg
-若ffmpeg和ffprobe已安装则跳过。
+### 2. Install ffmpeg
+Skip this step if ffmpeg and ffprobe are already installed.
 
-#### Ubuntu/Debian 用户
+#### Ubuntu/Debian Users
 ```bash
 sudo apt install ffmpeg
 ```
-#### MacOS 用户
-```bash
-brew install ffmpeg
-```
-#### Windows 用户
-下载后放置在根目录。
-- 下载[ffmpeg.exe](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/ffmpeg.exe)
 
-- 下载[ffprobe.exe](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/ffprobe.exe)
+### 3. Download Files for RMVPE Pitch Extraction Algorithm
 
-### 3. 下载 rmvpe 人声音高提取算法所需文件
+If you want to use the latest RMVPE pitch extraction algorithm, you need to download the pitch extraction model parameters and place them in the RVC root directory.
 
-如果你想使用最新的RMVPE人声音高提取算法，则你需要下载音高提取模型参数并放置于RVC根目录。
+- Download [rmvpe.pt](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/rmvpe.pt)
 
-- 下载[rmvpe.pt](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/rmvpe.pt)
+#### Download RMVPE for DML Environment (Optional, for AMD/Intel GPU Users)
 
-#### 下载 rmvpe 的 dml 环境(可选, A卡/I卡用户)
+- Download [rmvpe.onnx](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/rmvpe.onnx)
 
-- 下载[rmvpe.onnx](https://huggingface.co/lj1995/VoiceConversionWebUI/blob/main/rmvpe.onnx)
+### 4. AMD ROCm Setup (Optional, Linux Only)
 
-### 4. AMD显卡Rocm(可选, 仅Linux)
+If you want to run RVC on Linux using AMD's ROCm technology, first install the required drivers [here](https://rocm.docs.amd.com/en/latest/deploy/linux/os-native/install.html).
 
-如果你想基于AMD的Rocm技术在Linux系统上运行RVC，请先在[这里](https://rocm.docs.amd.com/en/latest/deploy/linux/os-native/install.html)安装所需的驱动。
-
-若你使用的是Arch Linux，可以使用pacman来安装所需驱动：
+For Arch Linux users, you can install the necessary drivers using pacman:
 ````
 pacman -S rocm-hip-sdk rocm-opencl-sdk
 ````
-对于某些型号的显卡，你可能需要额外配置如下的环境变量（如：RX6700XT）：
+For certain GPU models (e.g., RX6700XT), you may need to configure additional environment variables as follows:
 ````
 export ROCM_PATH=/opt/rocm
 export HSA_OVERRIDE_GFX_VERSION=10.3.0
 ````
-同时确保你的当前用户处于`render`与`video`用户组内：
+Also, ensure your current user is part of the `render` and `video` groups:
 ````
 sudo usermod -aG render $USERNAME
 sudo usermod -aG video $USERNAME
 ````
 
-## 开始使用
-### 直接启动
-使用以下指令来启动 WebUI
+## Getting Started
+### Direct Launch
+Use the following command to start the WebUI:
 ```bash
 python infer-web.py
 ```
 
-若先前使用 Poetry 安装依赖，则可以通过以下方式启动WebUI
+If you previously installed dependencies using Poetry, you can start the WebUI with:
 ```bash
 poetry run python infer-web.py
 ```
 
-### 使用整合包
-下载并解压`RVC-beta.7z`
-#### Windows 用户
-双击`go-web.bat`
-#### MacOS 用户
+### Using the All-in-One Package
+Download and extract `RVC-beta.7z`.
+#### Windows Users
+Double-click `go-web.bat`.
+#### MacOS Users
 ```bash
 sh ./run.sh
 ```
-### 对于需要使用IPEX技术的I卡用户(仅Linux)
+### For Intel GPU Users Requiring IPEX Technology (Linux Only)
 ```bash
 source /opt/intel/oneapi/setvars.sh
 ```
 
-## 参考项目
+## Reference Projects
 + [ContentVec](https://github.com/auspicious3000/contentvec/)
 + [VITS](https://github.com/jaywalnut310/vits)
 + [HIFIGAN](https://github.com/jik876/hifi-gan)
@@ -207,7 +179,7 @@ source /opt/intel/oneapi/setvars.sh
 + [Vocal pitch extraction:RMVPE](https://github.com/Dream-High/RMVPE)
   + The pretrained model is trained and tested by [yxlllc](https://github.com/yxlllc/RMVPE) and [RVC-Boss](https://github.com/RVC-Boss).
 
-## 感谢所有贡献者作出的努力
+## Acknowledgments to All Contributors for Their Efforts
 <a href="https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI/graphs/contributors" target="_blank">
   <img src="https://contrib.rocks/image?repo=RVC-Project/Retrieval-based-Voice-Conversion-WebUI" />
 </a>
