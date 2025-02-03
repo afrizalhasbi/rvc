@@ -242,23 +242,47 @@ class VC:
         format1,
     ):
         try:
-            dir_path = (
-                dir_path.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
-            )  # 防止小白拷路径头尾带了空格和"和回车
+            # Clean up input paths
+            dir_path = dir_path.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
             opt_root = opt_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+
+            # Make sure the output directory exists
             os.makedirs(opt_root, exist_ok=True)
+
+            # Gather all files from dir_path or from uploaded "paths"
             try:
                 if dir_path != "":
-                    paths = [
-                        os.path.join(dir_path, name) for name in os.listdir(dir_path)
-                    ]
+                    paths = [os.path.join(dir_path, name) for name in os.listdir(dir_path)]
                 else:
+                    # If user gave no directory, then `paths` is a list of uploaded files
                     paths = [path.name for path in paths]
             except:
                 traceback.print_exc()
+                # fallback if above logic hits error
                 paths = [path.name for path in paths]
+
             infos = []
             for path in paths:
+                # ------------------------------------------------------------
+                # 1) Build the name of the *target* output file for skipping
+                #    (Basename + .format1)
+                # ------------------------------------------------------------
+                out_filename = f"{os.path.basename(path)}.{format1}"
+                out_path = os.path.join(opt_root, out_filename)
+
+                # ------------------------------------------------------------
+                # 2) Check if the output file already exists, skip if it does
+                # ------------------------------------------------------------
+                if os.path.exists(out_path):
+                    skip_info = f"{os.path.basename(path)}->Skipped (already exists: {out_filename})"
+                    logger.info(skip_info)
+                    infos.append(skip_info)
+                    yield "\n".join(infos)
+                    continue
+
+                # ------------------------------------------------------------
+                # 3) If not exists, call vc_single to do the expensive inference
+                # ------------------------------------------------------------
                 info, opt = self.vc_single(
                     sid,
                     path,
@@ -267,38 +291,117 @@ class VC:
                     f0_method,
                     file_index,
                     file_index2,
-                    # file_big_npy,
                     index_rate,
                     filter_radius,
                     resample_sr,
                     rms_mix_rate,
                     protect,
                 )
+                # Only if inference was "Success" do we proceed to write the file
                 if "Success" in info:
                     try:
                         tgt_sr, audio_opt = opt
                         if format1 in ["wav", "flac"]:
-                            sf.write(
-                                "%s/%s.%s"
-                                % (opt_root, os.path.basename(path), format1),
-                                audio_opt,
-                                tgt_sr,
-                            )
+                            # Directly write wav/flac
+                            sf.write(out_path, audio_opt, tgt_sr)
                         else:
-                            path = "%s/%s.%s" % (
-                                opt_root,
-                                os.path.basename(path),
-                                format1,
-                            )
+                            # For mp3/m4a, etc., your existing logic:
+                            # 1) write a temporary wav in-memory
+                            # 2) convert to final format with `wav2`
                             with BytesIO() as wavf:
                                 sf.write(wavf, audio_opt, tgt_sr, format="wav")
-                                wavf.seek(0, 0)
-                                with open(path, "wb") as outf:
+                                wavf.seek(0)
+                                with open(out_path, "wb") as outf:
                                     wav2(wavf, outf, format1)
                     except:
                         info += traceback.format_exc()
-                infos.append("%s->%s" % (os.path.basename(path), info))
+
+                infos.append(f"{os.path.basename(path)}->{info}")
                 yield "\n".join(infos)
+
+            # Final yield (some frameworks need a last yield)
             yield "\n".join(infos)
+
         except:
             yield traceback.format_exc()
+
+# 
+#     def vc_multi(
+#         self,
+#         sid,
+#         dir_path,
+#         opt_root,
+#         paths,
+#         f0_up_key,
+#         f0_method,
+#         file_index,
+#         file_index2,
+#         index_rate,
+#         filter_radius,
+#         resample_sr,
+#         rms_mix_rate,
+#         protect,
+#         format1,
+#     ):
+#         try:
+#             dir_path = (
+#                 dir_path.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+#             )  # 防止小白拷路径头尾带了空格和"和回车
+#             opt_root = opt_root.strip(" ").strip('"').strip("\n").strip('"').strip(" ")
+#             os.makedirs(opt_root, exist_ok=True)
+#             try:
+#                 if dir_path != "":
+#                     paths = [
+#                         os.path.join(dir_path, name) for name in os.listdir(dir_path)
+#                     ]
+#                 else:
+#                     paths = [path.name for path in paths]
+#             except:
+#                 traceback.print_exc()
+#                 paths = [path.name for path in paths]
+#             infos = []
+#             for path in paths:
+#                 info, opt = self.vc_single(
+#                     sid,
+#                     path,
+#                     f0_up_key,
+#                     None,
+#                     f0_method,
+#                     file_index,
+#                     file_index2,
+#                     # file_big_npy,
+#                     index_rate,
+#                     filter_radius,
+#                     resample_sr,
+#                     rms_mix_rate,
+#                     protect,
+#                 )
+#                 if "Success" in info:
+#                     try:
+#                         tgt_sr, audio_opt = opt
+#                         if format1 in ["wav", "flac"]:
+#                             sf.write(
+#                                 "%s/%s.%s"
+#                                 % (opt_root, os.path.basename(path), format1),
+#                                 audio_opt,
+#                                 tgt_sr,
+#                             )
+#                         else:
+#                             path = "%s/%s.%s" % (
+#                                 opt_root,
+#                                 os.path.basename(path),
+#                                 format1,
+#                             )
+#                             with BytesIO() as wavf:
+#                                 sf.write(wavf, audio_opt, tgt_sr, format="wav")
+#                                 wavf.seek(0, 0)
+#                                 with open(path, "wb") as outf:
+#                                     wav2(wavf, outf, format1)
+#                     except:
+#                         info += traceback.format_exc()
+#                 infos.append("%s->%s" % (os.path.basename(path), info))
+#                 yield "\n".join(infos)
+#             yield "\n".join(infos)
+#         except:
+#             yield traceback.format_exc()
+# 

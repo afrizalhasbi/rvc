@@ -1,3 +1,10 @@
+contohs/
+example/
+wildspeech_mp3/
+wildspeech/
+tio_segments/
+indah_segments/
+
 .DS_Store
 __pycache__
 /TEMP
