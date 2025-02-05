@@ -79,7 +79,7 @@ class Pipeline(object):
         self.t_query = self.sr * self.x_query  # 查询切点前后查询时间
         self.t_center = self.sr * self.x_center  # 查询切点位置
         self.t_max = self.sr * self.x_max  # 免查询时长阈值
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = config.device
 
     def get_f0(
         self,
