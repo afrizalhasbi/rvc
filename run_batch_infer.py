@@ -111,104 +111,105 @@ def parse_arguments():
     return parser.parse_args()
 
 def main():
-    args = parse_arguments()
-    # Create config object
-    print("Initializing config")
-    config = Config()
-    print("Initializing config succesfull")
-    config.device = "cuda:0"
-    # E.g. optionally override config.device or config.is_half here:
-    # config.device = "cuda:0"  # or "cpu"
-    # config.is_half = True     # if you have enough GPU memory, half can speed things up
-
-    # 1) Initialize VC object
-    vc = VC(config)
-
-    # 2) Trick: the original `vc.get_vc(sid)` expects a 'sid' that is the name of the .pth
-    #    in your weights folder. By default, it does something like:
-    #        person = f'{os.getenv("weight_root")}/{sid}'
-    #
-    #    If you want to just feed it a full path, you can do:
-    #      os.environ["weight_root"] = ""    # or something else
-    #      sid = args.model_path
-    #
-    #    Or, you can patch `get_vc` yourself. For simplicity, let's do:
-    print("Get weight_root")
-    os.environ["weight_root"] = os.path.dirname(args.model_path)
-    sid_basename = os.path.basename(args.model_path)
-    print(f"Model path: {args.model_path}")
-    print(f"SID basename path: {sid_basename}")
-
-    # 3) Actually load the model
-    #    This will set up the pipeline, net_g, etc.
-    vc.get_vc(sid_basename)
-
-    # 4) Gather all input audio paths
-    input_files = []
-    if not os.path.isdir(args.input_dir):
-        print(f"ERROR: input_dir={args.input_dir} is not a directory.")
-        sys.exit(1)
-    for fname in os.listdir(args.input_dir):
-        # optionally filter by extension
-        if fname.lower().endswith((".wav", ".mp3", ".flac", ".ogg", ".m4a")):
-            input_files.append(os.path.join(args.input_dir, fname))
-    input_files.sort()
-
-    # 5) Make sure output directory is ready
-    os.makedirs(args.output_dir, exist_ok=True)
-
-    # 6) For each file, run single-file inference and write
-    for in_path in input_files:
-        # Build output path: e.g. "my_audio.mp3.wav" or "my_audio.wav.flac" etc
-        out_name = f"{os.path.basename(in_path)}.{args.format}"
-        out_path = os.path.join(args.output_dir, out_name)
-
-        if args.skip_existing and os.path.exists(out_path):
-            print(f"[INFO] Skipping existing: {out_path}")
-            continue
-
-        print(f"[INFO] Converting: {in_path} -> {out_path}")
-        try:
-            # call vc_single
-            info, (tgt_sr, audio_opt) = vc.vc_single(
-                # sid_basename,
-                0,
-                in_path,
-                f0_up_key=args.f0_up_key,
-                f0_file=None,        # not using external f0 file
-                f0_method=args.f0_method,
-                file_index=args.file_index,
-                file_index2="",      # we won't handle file_index2 here
-                index_rate=args.index_rate,
-                filter_radius=args.filter_radius,
-                resample_sr=args.resample_sr,
-                rms_mix_rate=args.rms_mix_rate,
-                protect=args.protect,
-            )
-
-            if "Success" not in info or (tgt_sr is None or audio_opt is None):
-                # means some error occurred in vc_single
-                print(f"[WARNING] Inference failed on {in_path}\n{info}")
+    try:
+        args = parse_arguments()
+        # Create config object
+        print("Initializing config")
+        config = Config()
+        print("Initializing config succesfull")
+        config.device = "cuda:0"
+        config.is_half = True     # if you have enough GPU memory, half can speed things up
+    
+        # 1) Initialize VC object
+        vc = VC(config)
+    
+        # 2) Trick: the original `vc.get_vc(sid)` expects a 'sid' that is the name of the .pth
+        #    in your weights folder. By default, it does something like:
+        #        person = f'{os.getenv("weight_root")}/{sid}'
+        #
+        #    If you want to just feed it a full path, you can do:
+        #      os.environ["weight_root"] = ""    # or something else
+        #      sid = args.model_path
+        #
+        #    Or, you can patch `get_vc` yourself. For simplicity, let's do:
+        print("Get weight_root")
+        os.environ["weight_root"] = os.path.dirname(args.model_path)
+        sid_basename = os.path.basename(args.model_path)
+        print(f"Model path: {args.model_path}")
+        print(f"SID basename path: {sid_basename}")
+    
+        # 3) Actually load the model
+        #    This will set up the pipeline, net_g, etc.
+        vc.get_vc(sid_basename)
+    
+        # 4) Gather all input audio paths
+        input_files = []
+        if not os.path.isdir(args.input_dir):
+            print(f"ERROR: input_dir={args.input_dir} is not a directory.")
+            sys.exit(1)
+        for fname in os.listdir(args.input_dir):
+            # optionally filter by extension
+            if fname.lower().endswith((".wav", ".mp3", ".flac", ".ogg", ".m4a")):
+                input_files.append(os.path.join(args.input_dir, fname))
+        input_files.sort()
+    
+        # 5) Make sure output directory is ready
+        os.makedirs(args.output_dir, exist_ok=True)
+    
+        # 6) For each file, run single-file inference and write
+        for in_path in input_files:
+            # Build output path: e.g. "my_audio.mp3.wav" or "my_audio.wav.flac" etc
+            out_name = f"{os.path.basename(in_path)}.{args.format}"
+            out_path = os.path.join(args.output_dir, out_name)
+    
+            if args.skip_existing and os.path.exists(out_path):
+                print(f"[INFO] Skipping existing: {out_path}")
                 continue
-
-            # Write to disk
-            if args.format in ["wav", "flac"]:
-                sf.write(out_path, audio_opt, tgt_sr, format=args.format)
-            else:
-                # for mp3/m4a etc. we do the same “in-memory wav then encode” approach
-                from infer.lib.audio import wav2
-                with BytesIO() as wav_buffer:
-                    sf.write(wav_buffer, audio_opt, tgt_sr, format="wav")
-                    wav_buffer.seek(0)
-                    with open(out_path, "wb") as outf:
-                        wav2(wav_buffer, outf, args.format)
-
-            print(f"[INFO] Done: {in_path} -> {out_path}")
-        except Exception as e:
-            traceback.print_exc()
-            print(f"[ERROR] Failed on {in_path}: {str(e)}")
-
-    print("All done!")
+    
+            print(f"[INFO] Converting: {in_path} -> {out_path}")
+            try:
+                # call vc_single
+                info, (tgt_sr, audio_opt) = vc.vc_single(
+                    # sid_basename,
+                    0,
+                    in_path,
+                    f0_up_key=args.f0_up_key,
+                    f0_file=None,        # not using external f0 file
+                    f0_method=args.f0_method,
+                    file_index=args.file_index,
+                    file_index2="",      # we won't handle file_index2 here
+                    index_rate=args.index_rate,
+                    filter_radius=args.filter_radius,
+                    resample_sr=args.resample_sr,
+                    rms_mix_rate=args.rms_mix_rate,
+                    protect=args.protect,
+                )
+    
+                if "Success" not in info or (tgt_sr is None or audio_opt is None):
+                    # means some error occurred in vc_single
+                    print(f"[WARNING] Inference failed on {in_path}\n{info}")
+                    continue
+    
+                # Write to disk
+                if args.format in ["wav", "flac"]:
+                    sf.write(out_path, audio_opt, tgt_sr, format=args.format)
+                else:
+                    # for mp3/m4a etc. we do the same “in-memory wav then encode” approach
+                    from infer.lib.audio import wav2
+                    with BytesIO() as wav_buffer:
+                        sf.write(wav_buffer, audio_opt, tgt_sr, format="wav")
+                        wav_buffer.seek(0)
+                        with open(out_path, "wb") as outf:
+                            wav2(wav_buffer, outf, args.format)
+    
+                print(f"[INFO] Done: {in_path} -> {out_path}")
+            except Exception as e:
+                traceback.print_exc()
+                print(f"[ERROR] Failed on {in_path}: {str(e)}")
+    
+        print("All done!")
+    except KeyBoardInterrupt:
+        sys.exit()
 
 
 if __name__ == "__main__":
