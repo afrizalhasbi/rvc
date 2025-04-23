@@ -99,7 +99,7 @@ def parse_arguments():
     parser.add_argument(
         "--format",
         type=str,
-        default="mp3",
+        default="wav",
         choices=["wav", "flac", "m4a", "mp3"],
         help="Output audio format. Default=wav",
     )
