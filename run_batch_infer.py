@@ -208,7 +208,7 @@ def main():
                 print(f"[ERROR] Failed on {in_path}: {str(e)}")
     
         print("All done!")
-    except KeyBoardInterrupt:
+    except KeyboardInterrupt:
         sys.exit()
 
 
