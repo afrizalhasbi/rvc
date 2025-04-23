@@ -9,7 +9,8 @@ def get_index_path_from_model(sid):
             f
             for f in [
                 os.path.join(root, name)
-                for root, _, files in os.walk(os.getenv("index_root"), topdown=False)
+                # for root, _, files in os.walk(os.getenv("index_root"), topdown=False)
+                for root, _, files in os.walk("assets/rmvpe", topdown=False)
                 for name in files
                 if name.endswith(".index") and "trained" not in name
             ]
