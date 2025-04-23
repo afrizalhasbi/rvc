@@ -128,7 +128,7 @@ class VC:
 
         self.pipeline = Pipeline(self.tgt_sr, self.config)
         n_spk = self.cpt["config"][-3]
-        assert(isinstance(sid, str), "sid is not a string!")
+        assert isinstance(sid, str), "sid is not a string!"
         index = {"value": get_index_path_from_model(sid), "__type__": "update"}
         logger.info("Select index: " + index["value"])
 
