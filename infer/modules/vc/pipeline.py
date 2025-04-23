@@ -143,6 +143,10 @@ class Pipeline(object):
             if not hasattr(self, "model_rmvpe"):
                 from infer.lib.rmvpe import RMVPE
 
+                ###### LIBRARY GEMBLUNG!!!! GA JELAS TENAN ASUUUU
+                os.environ["rmvpe_root"] = "assets/rmvpe"
+                ######
+
                 logger.info(
                     "Loading rmvpe model,%s" % "%s/rmvpe.pt" % os.environ["rmvpe_root"]
                 )
