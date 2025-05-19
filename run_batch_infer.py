@@ -159,7 +159,7 @@ def main():
         # 6) For each file, run single-file inference and write
         for in_path in input_files:
             # Build output path: e.g. "my_audio.mp3.wav" or "my_audio.wav.flac" etc
-            out_name = f"{os.path.basename(in_path)}.{args.format}"
+            out_name = f"{os.path.basename(in_path)}.{args.format}".replace(".mp3.wav", ".wav")
             out_path = os.path.join(args.output_dir, out_name)
     
             if args.skip_existing and os.path.exists(out_path):
