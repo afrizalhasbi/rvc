@@ -8,12 +8,12 @@ import re
 
 
 def wav2(i, o, format):
-    inp = av.open(i, "rb")
+    inp = av.open(i, "r")
     if format == "m4a":
         format = "mp4"
-    out = av.open(o, "wb", format=format)
+    out = av.open(o, "w", format=format)
     if format == "ogg":
-        format = "libvorbis"
+        format = "libvoris"
     if format == "mp4":
         format = "aac"
 

@@ -9,6 +9,7 @@ import numpy as np
 import soundfile as sf
 import torch
 from io import BytesIO
+from pydub import AudioSegment
 
 # Make sure you can import from your RVC repo:
 # e.g. put 'modules.py' + 'pipeline.py' + 'utils.py' etc. in a folder called "rvc_infer"
@@ -100,7 +101,7 @@ def parse_arguments():
         "--format",
         type=str,
         default="wav",
-        choices=["wav", "flac", "m4a", "mp3"],
+        choices=["wav", "flac", "mp3"],
         help="Output audio format. Default=wav",
     )
     parser.add_argument(
@@ -166,7 +167,7 @@ def main():
                 print(f"[INFO] Skipping existing: {out_path}")
                 continue
     
-            print(f"[INFO] Converting: {in_path} -> {out_path}")
+            # print(f"[INFO] Converting: {in_path} -> {out_path}")
             try:
                 # call vc_single
                 info, (tgt_sr, audio_opt) = vc.vc_single(
@@ -191,8 +192,13 @@ def main():
                     continue
     
                 # Write to disk
-                if args.format in ["wav", "flac"]:
+                if args.format in ["wav", "flac", "mp3"]:
                     sf.write(out_path, audio_opt, tgt_sr, format=args.format)
+                    audio = AudioSegment.from_wav(out_path)
+                    if args.format == "mp3":
+                        mp3_path = out_path.replace(".wav", ".mp3").replace(".flac", ".mp3").
+                        audio.export(mp3_path, format="mp3")
+                        os.remove(out_path)
                 else:
                     # for mp3/m4a etc. we do the same “in-memory wav then encode” approach
                     from infer.lib.audio import wav2
