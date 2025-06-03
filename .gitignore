@@ -4,6 +4,7 @@ wildspeech_mp3/
 wildspeech/
 tio_segments/
 indah_segments/
+datasets
 
 .DS_Store
 __pycache__
